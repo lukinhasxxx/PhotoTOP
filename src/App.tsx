@@ -1,8 +1,10 @@
-import React, { useState, ChangeEvent, useRef } from 'react';
+import React, { useState, ChangeEvent, useRef, useMemo } from 'react';
 import './App.css';
 
 function App() {
   const [image, setImage] = useState<string | null>(null);
+  const [images, setImages] = useState<{ src: string; editedSrc?: string | null }[]>([]);
+  const [editedImage, setEditedImage] = useState<string | null>(null);
   const uploadedImageRef = useRef<HTMLImageElement>(null);
 
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -23,74 +25,98 @@ function App() {
   const convertToBlackAndWhite = () => {
     if (uploadedImageRef.current) {
       const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = uploadedImageRef.current;
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx?.drawImage(img, 0, 0);
-      const imageData = ctx?.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imageData?.data;
-      if (data) {
-        for (let i = 0; i < data.length; i += 4) {
-          const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-          data[i] = avg;
-          data[i + 1] = avg;
-          data[i + 2] = avg;
-        }
-        ctx?.putImageData(imageData, 0, 0);
-        img.src = canvas.toDataURL();
+      const ctx = canvas.getContext('2d')!!;
+      canvas.width = uploadedImageRef.current.width;
+      canvas.height = uploadedImageRef.current.height;
+      ctx.drawImage(uploadedImageRef.current, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+        data[i] = avg;
+        data[i + 1] = avg;
+        data[i + 2] = avg;
       }
+      ctx.putImageData(imageData, 0, 0);
+      const editedSrc = canvas.toDataURL();
+      setEditedImage(editedSrc);
+      uploadedImageRef.current.src = editedSrc;
     }
   };
 
   const rotateImage = () => {
     if (uploadedImageRef.current) {
       const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = uploadedImageRef.current;
-      canvas.width = img.height;
-      canvas.height = img.width;
-      ctx?.translate(canvas.width / 2, canvas.height / 2);
-      ctx?.rotate(Math.PI / 2);
-      ctx?.drawImage(img, -img.width / 2, -img.height / 2);
-      img.src = canvas.toDataURL();
+      const ctx = canvas.getContext('2d')!!;
+      canvas.width = uploadedImageRef.current.height;
+      canvas.height = uploadedImageRef.current.width;
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate(Math.PI / 2);
+      ctx.drawImage(uploadedImageRef.current, -uploadedImageRef.current.width / 2, -uploadedImageRef.current.height / 2);
+      const editedSrc = canvas.toDataURL();
+      setEditedImage(editedSrc);
+      uploadedImageRef.current.src = editedSrc;
     }
   };
 
   const compressImage = () => {
     if (uploadedImageRef.current) {
       const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = uploadedImageRef.current;
-      canvas.width = img.width / 2;
-      canvas.height = img.height / 2;
-      ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-      img.src = canvas.toDataURL();
+      const ctx = canvas.getContext('2d')!!;
+      canvas.width = uploadedImageRef.current.width / 2;
+      canvas.height = uploadedImageRef.current.height / 2;
+      ctx.drawImage(uploadedImageRef.current, 0, 0, canvas.width, canvas.height);
+      const editedSrc = canvas.toDataURL();
+      setEditedImage(editedSrc);
+      uploadedImageRef.current.src = editedSrc;
     }
   };
 
   const convertToBitmap = () => {
     if (uploadedImageRef.current) {
       const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = uploadedImageRef.current;
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx?.drawImage(img, 0, 0);
-      const imageData = ctx?.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imageData?.data;
-      if (data) {
-        for (let i = 0; i < data.length; i += 4) {
-          const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-          data[i] = avg < 128 ? 0 : 255;
-          data[i + 1] = avg < 128 ? 0 : 255;
-          data[i + 2] = avg < 128 ? 0 : 255;
-        }
-        ctx?.putImageData(imageData, 0, 0);
-        img.src = canvas.toDataURL();
+      const ctx = canvas.getContext('2d')!!;
+      canvas.width = uploadedImageRef.current.width;
+      canvas.height = uploadedImageRef.current.height;
+      ctx.drawImage(uploadedImageRef.current, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+        data[i] = avg < 128 ? 0 : 255;
+        data[i + 1] = avg < 128 ? 0 : 255;
+        data[i + 2] = avg < 128 ? 0 : 255;
       }
+      ctx.putImageData(imageData, 0, 0);
+      const editedSrc = canvas.toDataURL();
+      setEditedImage(editedSrc);
+      uploadedImageRef.current.src = editedSrc;
     }
   };
+
+  const handleStoreImage = () => {
+    if (uploadedImageRef.current && image) {
+      setImages(prevImages => [...prevImages, { src: image, editedSrc: editedImage }]);
+      setImage(null);
+      setEditedImage(null);
+    }
+  };
+
+  const imageList = useMemo(
+    () => images.map((img, index) => (
+      <img
+        key={index}
+        src={img.editedSrc || img.src}
+        alt={`Uploaded Image ${index}`}
+        style={{ width: '100px', height: 'auto', margin: '5px', cursor: 'pointer' }}
+        onClick={() => {
+          setImage(img.src);
+          setEditedImage(img.editedSrc || null);
+        }}
+      />
+    )),
+    [images]
+  );
 
   return (
     <div style={{
@@ -109,13 +135,14 @@ function App() {
         padding: '20px',
         borderRadius: '10px',
         boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-        textAlign: 'center'
+        textAlign: 'center',
+        width: '80%'
       }}>
         <input type="file" id="imageInput" accept="image/*" onChange={handleImageChange} />
         <div style={{ marginBottom: '20px' }} className="image-container">
-          {image && <img src={image} alt="Uploaded Image" id="uploadedImage" ref={uploadedImageRef} />}
+          {image && <img ref={uploadedImageRef} src={editedImage || image} alt="Uploaded Image" id="uploadedImage" />}
         </div>
-        <div style={{ display: 'flex', justifyContent: 'center' }} className="controls">
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }} className="controls">
           <button style={{
             padding: '10px 20px',
             backgroundColor: '#007bff',
@@ -156,6 +183,19 @@ function App() {
             marginRight: '10px',
             opacity: 0.9
           }} onClick={convertToBitmap}>Bitmap</button>
+          <button style={{
+            padding: '10px 20px',
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: 'pointer',
+            marginRight: '10px',
+            opacity: 0.9
+          }} onClick={handleStoreImage}>Salvar Imagem</button>
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center' }}>
+          {imageList}
         </div>
       </div>
     </div>
