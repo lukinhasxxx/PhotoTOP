@@ -5,7 +5,10 @@ function App() {
   const [image, setImage] = useState<string | null>(null);
   const [images, setImages] = useState<{ src: string; editedSrc?: string | null }[]>([]);
   const [editedImage, setEditedImage] = useState<string | null>(null);
+  const [originalImage, setOriginalImage] = useState<string | null>(null);
   const uploadedImageRef = useRef<HTMLImageElement>(null);
+  const [blurStep, setBlurStep] = useState<number>(0);
+  const [prevBlurSteps, setPrevBlurSteps] = useState<string[]>([]);
 
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files && e.target.files[0];
@@ -14,6 +17,7 @@ function App() {
     reader.onloadend = () => {
       if (typeof reader.result === 'string') {
         setImage(reader.result);
+        setOriginalImage(reader.result);
       }
     };
 
@@ -126,17 +130,33 @@ function App() {
       ctx.filter = `blur(${amount}px)`;
       ctx.drawImage(uploadedImageRef.current, 0, 0);
       const editedSrc = canvas.toDataURL();
+      setPrevBlurSteps(prevSteps => [...prevSteps, editedSrc]);
       setEditedImage(editedSrc);
       uploadedImageRef.current.src = editedSrc;
     }
   };
 
   const handleBlurImage = () => {
-    blurOrSharpenImage(3); // Altere o valor de acordo com a quantidade de desfoque desejada
+    if (uploadedImageRef.current) {
+      blurOrSharpenImage(3);
+      setBlurStep(prevStep => prevStep + 1);
+    }
   };
 
-  const handleSharpenImage = () => {
-    blurOrSharpenImage(-3); // Altere o valor de acordo com a quantidade de nitidez desejada
+  const handleUnblurImage = () => {
+    if (blurStep > 0) {
+      setBlurStep(prevStep => prevStep - 1);
+      const prevImage = prevBlurSteps.pop();
+      if (prevImage) {
+        setEditedImage(prevImage);
+        uploadedImageRef.current!.src = prevImage;
+      }
+    } else {
+      setEditedImage(originalImage);
+      if (originalImage) {
+        uploadedImageRef.current!.src = originalImage;
+      }
+    }
   };
 
   const imageList = useMemo(
@@ -154,6 +174,17 @@ function App() {
     )),
     [images]
   );
+
+  const handleDownloadImage = () => {
+    if (editedImage) {
+      const downloadLink = document.createElement('a');
+      downloadLink.href = editedImage;
+      downloadLink.download = 'edited_image.png';
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+    }
+  };
 
   return (
     <div style={{
@@ -180,87 +211,15 @@ function App() {
           {image && <img ref={uploadedImageRef} src={editedImage || image} alt="Uploaded Image" id="uploadedImage" />}
         </div>
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }} className="controls">
-          <button style={{
-            padding: '10px 20px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '5px',
-            cursor: 'pointer',
-            marginRight: '10px',
-            opacity: 0.9
-          }} onClick={convertToBlackAndWhite}>Preto e Branco</button>
-          <button style={{
-            padding: '10px 20px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '5px',
-            cursor: 'pointer',
-            marginRight: '10px',
-            opacity: 0.9
-          }} onClick={rotateImage}>Girar</button>
-          <button style={{
-            padding: '10px 20px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '5px',
-            cursor: 'pointer',
-            marginRight: '10px',
-            opacity: 0.9
-          }} onClick={compressImage}>Comprimir</button>
-          <button style={{
-            padding: '10px 20px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '5px',
-            cursor: 'pointer',
-            marginRight: '10px',
-            opacity: 0.9
-          }} onClick={convertToBitmap}>Bitmap</button>
-          <button style={{
-            padding: '10px 20px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '5px',
-            cursor: 'pointer',
-            marginRight: '10px',
-            opacity: 0.9
-          }} onClick={handleStoreImage}>Salvar Imagem</button>
-          {/* Novos botões */}
-          <button style={{
-            padding: '10px 20px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '5px',
-            cursor: 'pointer',
-            marginRight: '10px',
-            opacity: 0.9
-          }} onClick={mirrorImage}>Espelhar</button>
-          <button style={{
-            padding: '10px 20px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '5px',
-            cursor: 'pointer',
-            marginRight: '10px',
-            opacity: 0.9
-          }} onClick={handleBlurImage}>Borrar</button>
-          <button style={{
-            padding: '10px 20px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '5px',
-            cursor: 'pointer',
-            marginRight: '10px',
-            opacity: 0.9
-          }} onClick={handleSharpenImage}>Nitidez</button>
+          <button className="button" onClick={convertToBlackAndWhite}>Preto e Branco</button>
+          <button className="button" onClick={rotateImage}>Girar</button>
+          <button className="button" onClick={compressImage}>Comprimir</button>
+          <button className="button" onClick={convertToBitmap}>Bitmap</button>
+          <button className="button" onClick={handleStoreImage}>Salvar Imagem</button>
+          <button className="button" onClick={mirrorImage}>Espelhar</button>
+          <button className="button" onClick={handleBlurImage}>Borrar</button>
+          <button className="button" onClick={handleUnblurImage}>Desborrar</button>
+          <button className="button" onClick={handleDownloadImage}>Download</button>
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center' }}>
           {imageList}
