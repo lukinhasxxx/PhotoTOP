@@ -1,4 +1,4 @@
-import React, { useState, ChangeEvent, useRef, useMemo } from 'react';
+import React, { useState, ChangeEvent, useRef, useMemo, useEffect } from 'react';
 import './App.css';
 
 function App() {
@@ -6,9 +6,28 @@ function App() {
   const [images, setImages] = useState<{ src: string; editedSrc?: string | null }[]>([]);
   const [editedImage, setEditedImage] = useState<string | null>(null);
   const [originalImage, setOriginalImage] = useState<string | null>(null);
+  const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
   const uploadedImageRef = useRef<HTMLImageElement>(null);
   const [blurStep, setBlurStep] = useState<number>(0);
   const [prevBlurSteps, setPrevBlurSteps] = useState<string[]>([]);
+  const [isBlackAndWhite, setIsBlackAndWhite] = useState<boolean>(false);
+  const [compressedImage, setCompressedImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const updateImageSize = () => {
+      if (uploadedImageRef.current) {
+        const { width, height } = uploadedImageRef.current;
+        setImageSize({ width, height });
+      }
+    };
+
+    updateImageSize();
+    window.addEventListener('resize', updateImageSize);
+
+    return () => {
+      window.removeEventListener('resize', updateImageSize);
+    };
+  }, [editedImage, image]);
 
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files && e.target.files[0];
@@ -28,23 +47,29 @@ function App() {
 
   const convertToBlackAndWhite = () => {
     if (uploadedImageRef.current) {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d')!!;
-      canvas.width = uploadedImageRef.current.width;
-      canvas.height = uploadedImageRef.current.height;
-      ctx.drawImage(uploadedImageRef.current, 0, 0);
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imageData.data;
-      for (let i = 0; i < data.length; i += 4) {
-        const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-        data[i] = avg;
-        data[i + 1] = avg;
-        data[i + 2] = avg;
+      if (isBlackAndWhite) {
+        setEditedImage(originalImage);
+        uploadedImageRef.current.src = originalImage!;
+      } else {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d')!!;
+        canvas.width = uploadedImageRef.current.width;
+        canvas.height = uploadedImageRef.current.height;
+        ctx.drawImage(uploadedImageRef.current, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        for (let i = 0; i < data.length; i += 4) {
+          const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+          data[i] = avg;
+          data[i + 1] = avg;
+          data[i + 2] = avg;
+        }
+        ctx.putImageData(imageData, 0, 0);
+        const editedSrc = canvas.toDataURL();
+        setEditedImage(editedSrc);
+        uploadedImageRef.current.src = editedSrc;
       }
-      ctx.putImageData(imageData, 0, 0);
-      const editedSrc = canvas.toDataURL();
-      setEditedImage(editedSrc);
-      uploadedImageRef.current.src = editedSrc;
+      setIsBlackAndWhite(!isBlackAndWhite);
     }
   };
 
@@ -71,8 +96,17 @@ function App() {
       canvas.height = uploadedImageRef.current.height / 2;
       ctx.drawImage(uploadedImageRef.current, 0, 0, canvas.width, canvas.height);
       const editedSrc = canvas.toDataURL();
+      setCompressedImage(editedSrc);
       setEditedImage(editedSrc);
       uploadedImageRef.current.src = editedSrc;
+    }
+  };
+
+  const decompressImage = () => {
+    if (uploadedImageRef.current && compressedImage) {
+      uploadedImageRef.current.src = originalImage!;
+      setEditedImage(originalImage);
+      setCompressedImage(null);
     }
   };
 
@@ -206,21 +240,60 @@ function App() {
         textAlign: 'center',
         width: '80%'
       }}>
-        <input type="file" id="imageInput" accept="image/*" onChange={handleImageChange} />
-        <div style={{ marginBottom: '20px' }} className="image-container">
-          {image && <img ref={uploadedImageRef} src={editedImage || image} alt="Uploaded Image" id="uploadedImage" />}
+        {!image && (
+          <div style={{ fontSize: '24px', color: '#333', marginBottom: '20px' }}>
+            <label htmlFor="imageInput" style={{ cursor: 'pointer', color: '#4e54c8' }}>
+              Clique aqui para adicionar uma imagem
+            </label>
+          </div>
+        )}
+        <input type="file" id="imageInput" accept="image/*" onChange={handleImageChange} style={{ display: 'none' }} />
+        <div style={{ marginBottom: '20px', position: 'relative' }} className="image-container">
+          {image && (
+            <>
+              <img
+                ref={uploadedImageRef}
+                src={editedImage || image}
+                alt="Uploaded Image"
+                id="uploadedImage"
+                style={{
+                  maxWidth: '100%',
+                  borderRadius: '10px',
+                  boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+                  transition: 'all 0.3s ease'
+                }}
+              />
+              {imageSize && (
+                <div style={{
+                  position: 'absolute',
+                  top: '10px',
+                  left: '10px',
+                  padding: '5px 10px',
+                  backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                  color: '#fff',
+                  borderRadius: '5px',
+                  fontSize: '14px'
+                }}>
+                  {imageSize.width} x {imageSize.height}
+                </div>
+              )}
+            </>
+          )}
         </div>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }} className="controls">
-          <button className="button" onClick={convertToBlackAndWhite}>Preto e Branco</button>
-          <button className="button" onClick={rotateImage}>Girar</button>
-          <button className="button" onClick={compressImage}>Comprimir</button>
-          <button className="button" onClick={convertToBitmap}>Bitmap</button>
-          <button className="button" onClick={handleStoreImage}>Salvar Imagem</button>
-          <button className="button" onClick={mirrorImage}>Espelhar</button>
-          <button className="button" onClick={handleBlurImage}>Borrar</button>
-          <button className="button" onClick={handleUnblurImage}>Desborrar</button>
-          <button className="button" onClick={handleDownloadImage}>Download</button>
-        </div>
+        {image && (
+          <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '20px' }} className="controls">
+            <button className="button" onClick={convertToBlackAndWhite}>Preto e Branco</button>
+            <button className="button" onClick={rotateImage}>Girar</button>
+            <button className="button" onClick={compressImage}>Comprimir</button>
+            <button className="button" onClick={decompressImage}>Descomprimir</button>
+            <button className="button" onClick={convertToBitmap}>Bitmap</button>
+            <button className="button" onClick={handleStoreImage}>Adicionar nova imagem</button>
+            <button className="button" onClick={mirrorImage}>Espelhar</button>
+            <button className="button" onClick={handleBlurImage}>Borrar</button>
+            <button className="button" onClick={handleUnblurImage}>Desborrar</button>
+            <button className="button" onClick={handleDownloadImage}>Download</button>
+          </div>
+        )}
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center' }}>
           {imageList}
         </div>
