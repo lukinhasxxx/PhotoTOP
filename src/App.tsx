@@ -102,6 +102,43 @@ function App() {
     }
   };
 
+  const mirrorImage = () => {
+    if (uploadedImageRef.current) {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!!;
+      canvas.width = uploadedImageRef.current.width;
+      canvas.height = uploadedImageRef.current.height;
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(uploadedImageRef.current, 0, 0);
+      const editedSrc = canvas.toDataURL();
+      setEditedImage(editedSrc);
+      uploadedImageRef.current.src = editedSrc;
+    }
+  };
+
+  const blurOrSharpenImage = (amount: number) => {
+    if (uploadedImageRef.current) {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!!;
+      canvas.width = uploadedImageRef.current.width;
+      canvas.height = uploadedImageRef.current.height;
+      ctx.filter = `blur(${amount}px)`;
+      ctx.drawImage(uploadedImageRef.current, 0, 0);
+      const editedSrc = canvas.toDataURL();
+      setEditedImage(editedSrc);
+      uploadedImageRef.current.src = editedSrc;
+    }
+  };
+
+  const handleBlurImage = () => {
+    blurOrSharpenImage(3); // Altere o valor de acordo com a quantidade de desfoque desejada
+  };
+
+  const handleSharpenImage = () => {
+    blurOrSharpenImage(-3); // Altere o valor de acordo com a quantidade de nitidez desejada
+  };
+
   const imageList = useMemo(
     () => images.map((img, index) => (
       <img
@@ -193,6 +230,37 @@ function App() {
             marginRight: '10px',
             opacity: 0.9
           }} onClick={handleStoreImage}>Salvar Imagem</button>
+          {/* Novos botões */}
+          <button style={{
+            padding: '10px 20px',
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: 'pointer',
+            marginRight: '10px',
+            opacity: 0.9
+          }} onClick={mirrorImage}>Espelhar</button>
+          <button style={{
+            padding: '10px 20px',
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: 'pointer',
+            marginRight: '10px',
+            opacity: 0.9
+          }} onClick={handleBlurImage}>Borrar</button>
+          <button style={{
+            padding: '10px 20px',
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: 'pointer',
+            marginRight: '10px',
+            opacity: 0.9
+          }} onClick={handleSharpenImage}>Nitidez</button>
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center' }}>
           {imageList}
