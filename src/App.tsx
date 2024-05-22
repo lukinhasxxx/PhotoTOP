@@ -9,9 +9,10 @@ function App() {
   const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
   const uploadedImageRef = useRef<HTMLImageElement>(null);
   const [blurStep, setBlurStep] = useState<number>(0);
-  const [prevBlurSteps, setPrevBlurSteps] = useState<string[]>([]);
+  const [blurHistory, setBlurHistory] = useState<string[]>([]);
   const [isBlackAndWhite, setIsBlackAndWhite] = useState<boolean>(false);
   const [compressedImage, setCompressedImage] = useState<string | null>(null);
+  const [bitmapHistory, setBitmapHistory] = useState<string[]>([]);
 
   useEffect(() => {
     const updateImageSize = () => {
@@ -37,6 +38,7 @@ function App() {
       if (typeof reader.result === 'string') {
         setImage(reader.result);
         setOriginalImage(reader.result);
+        setEditedImage(reader.result);
       }
     };
 
@@ -112,23 +114,35 @@ function App() {
 
   const convertToBitmap = () => {
     if (uploadedImageRef.current) {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d')!!;
-      canvas.width = uploadedImageRef.current.width;
-      canvas.height = uploadedImageRef.current.height;
-      ctx.drawImage(uploadedImageRef.current, 0, 0);
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imageData.data;
-      for (let i = 0; i < data.length; i += 4) {
-        const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-        data[i] = avg < 128 ? 0 : 255;
-        data[i + 1] = avg < 128 ? 0 : 255;
-        data[i + 2] = avg < 128 ? 0 : 255;
+      if (bitmapHistory.length > 0) {
+        // Restore the previous state
+        const prevImage = bitmapHistory.pop();
+        setBitmapHistory([...bitmapHistory]); // Update history
+        if (prevImage) {
+          setEditedImage(prevImage);
+          uploadedImageRef.current.src = prevImage;
+        }
+      } else {
+        // Save the current state and convert to bitmap
+        //setBitmapHistory([editedImage || originalImage]); // Save the current state
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d')!!;
+        canvas.width = uploadedImageRef.current.width;
+        canvas.height = uploadedImageRef.current.height;
+        ctx.drawImage(uploadedImageRef.current, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        for (let i = 0; i < data.length; i += 4) {
+          const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+          data[i] = avg < 128 ? 0 : 255;
+          data[i + 1] = avg < 128 ? 0 : 255;
+          data[i + 2] = avg < 128 ? 0 : 255;
+        }
+        ctx.putImageData(imageData, 0, 0);
+        const editedSrc = canvas.toDataURL();
+        setEditedImage(editedSrc);
+        uploadedImageRef.current.src = editedSrc;
       }
-      ctx.putImageData(imageData, 0, 0);
-      const editedSrc = canvas.toDataURL();
-      setEditedImage(editedSrc);
-      uploadedImageRef.current.src = editedSrc;
     }
   };
 
@@ -164,7 +178,7 @@ function App() {
       ctx.filter = `blur(${amount}px)`;
       ctx.drawImage(uploadedImageRef.current, 0, 0);
       const editedSrc = canvas.toDataURL();
-      setPrevBlurSteps(prevSteps => [...prevSteps, editedSrc]);
+      setBlurHistory(prevHistory => [...prevHistory, editedSrc]);
       setEditedImage(editedSrc);
       uploadedImageRef.current.src = editedSrc;
     }
@@ -179,8 +193,9 @@ function App() {
 
   const handleUnblurImage = () => {
     if (blurStep > 0) {
+      const prevImage = blurHistory[blurStep - 1];
+      setBlurHistory(prevHistory => prevHistory.slice(0, -1));
       setBlurStep(prevStep => prevStep - 1);
-      const prevImage = prevBlurSteps.pop();
       if (prevImage) {
         setEditedImage(prevImage);
         uploadedImageRef.current!.src = prevImage;
@@ -190,6 +205,38 @@ function App() {
       if (originalImage) {
         uploadedImageRef.current!.src = originalImage;
       }
+    }
+  };
+
+  const convertToSVG = () => {
+    if (uploadedImageRef.current) {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!!;
+      canvas.width = uploadedImageRef.current.width;
+      canvas.height = uploadedImageRef.current.height;
+      ctx.drawImage(uploadedImageRef.current, 0, 0);
+      const dataUrl = canvas.toDataURL(); // Get data URL of the image
+
+      // Create a new image element to load the data URL
+      const img = new Image();
+      img.onload = () => {
+        const svg = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="${img.width}" height="${img.height}">
+            <image href="${dataUrl}" width="100%" height="100%"/>
+          </svg>
+        `;
+
+        // Download the SVG
+        const blob = new Blob([svg], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(blob);
+        const downloadLink = document.createElement('a');
+        downloadLink.href = url;
+        downloadLink.download = 'image.svg';
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+      };
+      img.src = dataUrl;
     }
   };
 
@@ -281,7 +328,7 @@ function App() {
           )}
         </div>
         {image && (
-          <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '20px' }} className="controls">
+          <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '20px', padding: '0 20px' }} className="controls">
             <button className="button" onClick={convertToBlackAndWhite}>Preto e Branco</button>
             <button className="button" onClick={rotateImage}>Girar</button>
             <button className="button" onClick={compressImage}>Comprimir</button>
@@ -292,9 +339,10 @@ function App() {
             <button className="button" onClick={handleBlurImage}>Borrar</button>
             <button className="button" onClick={handleUnblurImage}>Desborrar</button>
             <button className="button" onClick={handleDownloadImage}>Download</button>
+            <button className="button" onClick={convertToSVG}>Converter e baixar em SVG</button>
           </div>
         )}
-        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '5px' }}>
           {imageList}
         </div>
       </div>

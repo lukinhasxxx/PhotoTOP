@@ -20,7 +20,7 @@ body {
 }
 
 .controls button {
-  margin-right: 10px;
+  margin: 5px;
   padding: 10px 20px;
   cursor: pointer;
   background-color: #007bff;
