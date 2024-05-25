@@ -9,10 +9,10 @@ function App() {
   const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
   const uploadedImageRef = useRef<HTMLImageElement>(null);
   const [blurStep, setBlurStep] = useState<number>(0);
-  const [blurHistory, setBlurHistory] = useState<string[]>([]);
+  const [prevBlurSteps, setPrevBlurSteps] = useState<string[]>([]);
   const [isBlackAndWhite, setIsBlackAndWhite] = useState<boolean>(false);
   const [compressedImage, setCompressedImage] = useState<string | null>(null);
-  const [bitmapHistory, setBitmapHistory] = useState<string[]>([]);
+  const [prevBitmapImage, setPrevBitmapImage] = useState<string | null>(null);
 
   useEffect(() => {
     const updateImageSize = () => {
@@ -38,7 +38,6 @@ function App() {
       if (typeof reader.result === 'string') {
         setImage(reader.result);
         setOriginalImage(reader.result);
-        setEditedImage(reader.result);
       }
     };
 
@@ -55,8 +54,8 @@ function App() {
       } else {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d')!!;
-        canvas.width = uploadedImageRef.current.width;
-        canvas.height = uploadedImageRef.current.height;
+        canvas.width = uploadedImageRef.current.naturalWidth;
+        canvas.height = uploadedImageRef.current.naturalHeight;
         ctx.drawImage(uploadedImageRef.current, 0, 0);
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const data = imageData.data;
@@ -94,8 +93,8 @@ function App() {
     if (uploadedImageRef.current) {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d')!!;
-      canvas.width = uploadedImageRef.current.width / 2;
-      canvas.height = uploadedImageRef.current.height / 2;
+      canvas.width = uploadedImageRef.current.naturalWidth / 2;
+      canvas.height = uploadedImageRef.current.naturalHeight / 2;
       ctx.drawImage(uploadedImageRef.current, 0, 0, canvas.width, canvas.height);
       const editedSrc = canvas.toDataURL();
       setCompressedImage(editedSrc);
@@ -114,21 +113,18 @@ function App() {
 
   const convertToBitmap = () => {
     if (uploadedImageRef.current) {
-      if (bitmapHistory.length > 0) {
+      if (prevBitmapImage) {
         // Restore the previous state
-        const prevImage = bitmapHistory.pop();
-        setBitmapHistory([...bitmapHistory]); // Update history
-        if (prevImage) {
-          setEditedImage(prevImage);
-          uploadedImageRef.current.src = prevImage;
-        }
+        setEditedImage(originalImage); // Restore the original image
+        uploadedImageRef.current.src = originalImage!;
+        setPrevBitmapImage(null);
       } else {
         // Save the current state and convert to bitmap
-        //setBitmapHistory([editedImage || originalImage]); // Save the current state
+        setPrevBitmapImage(editedImage || originalImage); // Save the current state
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d')!!;
-        canvas.width = uploadedImageRef.current.width;
-        canvas.height = uploadedImageRef.current.height;
+        canvas.width = uploadedImageRef.current.naturalWidth;
+        canvas.height = uploadedImageRef.current.naturalHeight;
         ctx.drawImage(uploadedImageRef.current, 0, 0);
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const data = imageData.data;
@@ -158,8 +154,8 @@ function App() {
     if (uploadedImageRef.current) {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d')!!;
-      canvas.width = uploadedImageRef.current.width;
-      canvas.height = uploadedImageRef.current.height;
+      canvas.width = uploadedImageRef.current.naturalWidth;
+      canvas.height = uploadedImageRef.current.naturalHeight;
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
       ctx.drawImage(uploadedImageRef.current, 0, 0);
@@ -173,12 +169,12 @@ function App() {
     if (uploadedImageRef.current) {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d')!!;
-      canvas.width = uploadedImageRef.current.width;
-      canvas.height = uploadedImageRef.current.height;
+      canvas.width = uploadedImageRef.current.naturalWidth;
+      canvas.height = uploadedImageRef.current.naturalHeight;
       ctx.filter = `blur(${amount}px)`;
       ctx.drawImage(uploadedImageRef.current, 0, 0);
       const editedSrc = canvas.toDataURL();
-      setBlurHistory(prevHistory => [...prevHistory, editedSrc]);
+      setPrevBlurSteps(prevSteps => [...prevSteps, editedSrc]);
       setEditedImage(editedSrc);
       uploadedImageRef.current.src = editedSrc;
     }
@@ -193,9 +189,8 @@ function App() {
 
   const handleUnblurImage = () => {
     if (blurStep > 0) {
-      const prevImage = blurHistory[blurStep - 1];
-      setBlurHistory(prevHistory => prevHistory.slice(0, -1));
       setBlurStep(prevStep => prevStep - 1);
+      const prevImage = prevBlurSteps.pop();
       if (prevImage) {
         setEditedImage(prevImage);
         uploadedImageRef.current!.src = prevImage;
@@ -212,8 +207,8 @@ function App() {
     if (uploadedImageRef.current) {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d')!!;
-      canvas.width = uploadedImageRef.current.width;
-      canvas.height = uploadedImageRef.current.height;
+      canvas.width = uploadedImageRef.current.naturalWidth;
+      canvas.height = uploadedImageRef.current.naturalHeight;
       ctx.drawImage(uploadedImageRef.current, 0, 0);
       const dataUrl = canvas.toDataURL(); // Get data URL of the image
 
