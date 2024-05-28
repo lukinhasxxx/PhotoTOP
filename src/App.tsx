@@ -1,74 +1,76 @@
-import React, { useState, ChangeEvent, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useEffect, useRef, ChangeEvent } from 'react';
 import './App.css';
 
 function App() {
-  const [image, setImage] = useState<string | null>(null);
-  const [images, setImages] = useState<{ src: string; editedSrc?: string | null }[]>([]);
-  const [editedImage, setEditedImage] = useState<string | null>(null);
-  const [originalImage, setOriginalImage] = useState<string | null>(null);
-  const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
-  const [uploadedImageResolution, setUploadedImageResolution] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
-  const uploadedImageRef = useRef<HTMLImageElement>(null);
-  const [blurStep, setBlurStep] = useState<number>(0);
-  const [prevBlurSteps, setPrevBlurSteps] = useState<string[]>([]);
-  const [isBlackAndWhite, setIsBlackAndWhite] = useState<boolean>(false);
-  const [compressedImage, setCompressedImage] = useState<string | null>(null);
-  const [prevBitmapImage, setPrevBitmapImage] = useState<string | null>(null);
-  const [customResolution, setCustomResolution] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+  const [imagem, setImagem] = useState<string | null>(null);
+  const [imagens, setImagens] = useState<{ src: string; editedSrc?: string | null }[]>([]);
+  const [imagemEditada, setImagemEditada] = useState<string | null>(null);
+  const [imagemOriginal, setImagemOriginal] = useState<string | null>(null);
+  const [tamanhoImagem, setTamanhoImagem] = useState<{ largura: number; altura: number } | null>(null);
+  const [resolucaoImagemCarregada, setResolucaoImagemCarregada] = useState<{ largura: number; altura: number }>({ largura: 0, altura: 0 });
+  const imagemCarregadaRef = useRef<HTMLImageElement>(null);
+  const [passoBorrado, setPassoBorrado] = useState<number>(0);
+  const [passosBorradosPrevios, setPassosBorradosPrevios] = useState<string[]>([]);
+  const [isPretoBranco, setIsPretoBranco] = useState<boolean>(false);
+  const [imagemComprimida, setImagemComprimida] = useState<string | null>(null);
+  const [imagemBitmapPrevia, setImagemBitmapPrevia] = useState<string | null>(null);
+  const [resolucaoPersonalizada, setResolucaoPersonalizada] = useState<{ largura: number; altura: number }>({ largura: 0, altura: 0 });
 
   useEffect(() => {
-    const updateImageSize = () => {
-      if (uploadedImageRef.current) {
-        const { width, height } = uploadedImageRef.current;
-        setImageSize({ width, height });
+    const atualizarTamanhoImagem = () => {
+      if (imagemCarregadaRef.current) {
+        const { naturalWidth, naturalHeight } = imagemCarregadaRef.current;
+        setTamanhoImagem({ largura: naturalWidth, altura: naturalHeight });
       }
     };
 
-    updateImageSize();
-    window.addEventListener('resize', updateImageSize);
+    atualizarTamanhoImagem();
+    window.addEventListener('resize', atualizarTamanhoImagem);
 
     return () => {
-      window.removeEventListener('resize', updateImageSize);
+      window.removeEventListener('resize', atualizarTamanhoImagem);
     };
-  }, [editedImage, image]);
+  }, [imagemEditada, imagem]);
 
   useEffect(() => {
-    if (uploadedImageRef.current && image) {
+    if (imagemCarregadaRef.current && imagem) {
       const img = new Image();
       img.onload = () => {
-        setUploadedImageResolution({ width: img.width, height: img.height });
+        setResolucaoImagemCarregada({ largura: img.width, altura: img.height });
       };
-      img.src = image;
+      img.src = imagem;
     }
-  }, [image]);
+  }, [imagem]);
 
-  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files && e.target.files[0];
+  const handleImagemChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const arquivo = e.target.files && e.target.files[0];
     const reader = new FileReader();
 
     reader.onloadend = () => {
       if (typeof reader.result === 'string') {
-        setImage(reader.result);
-        setOriginalImage(reader.result);
+        setImagem(reader.result);
+        setImagemOriginal(reader.result);
       }
     };
 
-    if (file) {
-      reader.readAsDataURL(file);
+    if (arquivo) {
+      reader.readAsDataURL(arquivo);
     }
   };
 
-  const convertToBlackAndWhite = () => {
-    if (uploadedImageRef.current) {
-      if (isBlackAndWhite) {
-        setEditedImage(originalImage);
-        uploadedImageRef.current.src = originalImage!;
+  const converterParaPretoBranco = () => {
+    if (imagemCarregadaRef.current) {
+      if (isPretoBranco) {
+        setImagemEditada(imagemOriginal);
+        imagemCarregadaRef.current.src = imagemOriginal!;
       } else {
         const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d')!!;
-        canvas.width = uploadedImageRef.current.width;
-        canvas.height = uploadedImageRef.current.height;
-        ctx.drawImage(uploadedImageRef.current, 0, 0);
+        const ctx = canvas.getContext('2d')!;
+        const img = imagemCarregadaRef.current;
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight);
+        
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const data = imageData.data;
         for (let i = 0; i < data.length; i += 4) {
@@ -79,30 +81,30 @@ function App() {
         }
         ctx.putImageData(imageData, 0, 0);
         const editedSrc = canvas.toDataURL();
-        setEditedImage(editedSrc);
-        uploadedImageRef.current.src = editedSrc;
+        setImagemEditada(editedSrc);
+        imagemCarregadaRef.current.src = editedSrc;
       }
-      setIsBlackAndWhite(!isBlackAndWhite);
-      setCompressedImage(null); // Reset compressed image state
-      setPrevBitmapImage(null); // Reset previous bitmap image state
+      setIsPretoBranco(!isPretoBranco);
+      setImagemComprimida(null);
+      setImagemBitmapPrevia(null);
     }
   };
 
-  const convertToBitmap = () => {
-    if (uploadedImageRef.current) {
-      if (prevBitmapImage) {
-        // Restore the previous state
-        setEditedImage(prevBitmapImage);
-        uploadedImageRef.current.src = prevBitmapImage;
-        setPrevBitmapImage(null);
+  const converterParaBitmap = () => {
+    if (imagemCarregadaRef.current) {
+      if (imagemBitmapPrevia) {
+        setImagemEditada(imagemBitmapPrevia);
+        imagemCarregadaRef.current.src = imagemBitmapPrevia;
+        setImagemBitmapPrevia(null);
       } else {
-        // Save the current state and convert to bitmap
-        setPrevBitmapImage(editedImage || originalImage); // Save the current state
+        setImagemBitmapPrevia(imagemEditada || imagemOriginal);
         const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d')!!;
-        canvas.width = uploadedImageRef.current.width;
-        canvas.height = uploadedImageRef.current.height;
-        ctx.drawImage(uploadedImageRef.current, 0, 0);
+        const ctx = canvas.getContext('2d')!;
+        const img = imagemCarregadaRef.current;
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight);
+
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const data = imageData.data;
         for (let i = 0; i < data.length; i += 4) {
@@ -113,179 +115,180 @@ function App() {
         }
         ctx.putImageData(imageData, 0, 0);
         const editedSrc = canvas.toDataURL();
-        setEditedImage(editedSrc);
-        uploadedImageRef.current.src = editedSrc;
+        setImagemEditada(editedSrc);
+        imagemCarregadaRef.current.src = editedSrc;
       }
-      setIsBlackAndWhite(false); // Reset black and white state
-      setCompressedImage(null); // Reset compressed image state
     }
   };
 
-  const rotateImage = () => {
-    if (uploadedImageRef.current) {
+  const girarImagem = () => {
+    if (imagemCarregadaRef.current) {
       const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d')!!;
-      canvas.width = uploadedImageRef.current.height;
-      canvas.height = uploadedImageRef.current.width;
+      const ctx = canvas.getContext('2d')!;
+      const img = imagemCarregadaRef.current;
+      canvas.width = img.naturalHeight;
+      canvas.height = img.naturalWidth;
       ctx.translate(canvas.width / 2, canvas.height / 2);
       ctx.rotate(Math.PI / 2);
-      ctx.drawImage(uploadedImageRef.current, -uploadedImageRef.current.width / 2, -uploadedImageRef.current.height / 2);
+      ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
       const editedSrc = canvas.toDataURL();
-      setEditedImage(editedSrc);
-      uploadedImageRef.current.src = editedSrc;
+      setImagemEditada(editedSrc);
+      imagemCarregadaRef.current.src = editedSrc;
+
+      if (resolucaoImagemCarregada) {
+        setResolucaoImagemCarregada({
+          largura: canvas.width,
+          altura: canvas.height
+        });
+      }
     }
   };
 
-  const compressImage = () => {
-    if (uploadedImageRef.current) {
+  const comprimirImagem = () => {
+    if (imagemCarregadaRef.current) {
       const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d')!!;
-      canvas.width = uploadedImageRef.current.width / 2;
-      canvas.height = uploadedImageRef.current.height / 2;
-      ctx.drawImage(uploadedImageRef.current, 0, 0, canvas.width, canvas.height);
+      const ctx = canvas.getContext('2d')!;
+      canvas.width = imagemCarregadaRef.current.width / 2;
+      canvas.height = imagemCarregadaRef.current.height / 2;
+      ctx.drawImage(imagemCarregadaRef.current, 0, 0, canvas.width, canvas.height);
       const editedSrc = canvas.toDataURL();
-      setCompressedImage(editedSrc);
-      setEditedImage(editedSrc);
-      uploadedImageRef.current.src = editedSrc;
+      setImagemComprimida(editedSrc);
+      setImagemEditada(editedSrc);
+      imagemCarregadaRef.current.src = editedSrc;
+
+      if (resolucaoImagemCarregada) {
+        setResolucaoImagemCarregada({
+          largura: canvas.width,
+          altura: canvas.height
+        });
+      }
     }
   };
 
-  const decompressImage = () => {
-    if (uploadedImageRef.current && compressedImage) {
-      uploadedImageRef.current.src = originalImage!;
-      setEditedImage(originalImage);
-      setCompressedImage(null);
+  const descomprimirImagem = () => {
+    if (imagemCarregadaRef.current && imagemComprimida) {
+      imagemCarregadaRef.current.src = imagemOriginal!;
+      setImagemEditada(imagemOriginal);
+      setImagemComprimida(null);
     }
   };
 
-  const handleStoreImage = () => {
-    if (uploadedImageRef.current && image) {
-      setImages(prevImages => [...prevImages, { src: image, editedSrc: editedImage }]);
-      setImage(null);
-      setEditedImage(null);
+  const handleArmazenarImagem = () => {
+    if (imagemCarregadaRef.current && imagem) {
+      setImagens(prevImagens => [...prevImagens, { src: imagem, editedSrc: imagemEditada }]);
+      setImagem(null);
+      setImagemEditada(null);
     }
   };
 
-  const mirrorImage = () => {
-    if (uploadedImageRef.current) {
+  const espelharImagem = () => {
+    if (imagemCarregadaRef.current) {
       const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d')!!;
-      canvas.width = uploadedImageRef.current.width;
-      canvas.height = uploadedImageRef.current.height;
+      const ctx = canvas.getContext('2d')!;
+      const img = imagemCarregadaRef.current;
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
-      ctx.drawImage(uploadedImageRef.current, 0, 0);
+      ctx.drawImage(img, 0, 0);
       const editedSrc = canvas.toDataURL();
-      setEditedImage(editedSrc);
-      uploadedImageRef.current.src = editedSrc;
+      setImagemEditada(editedSrc);
+      imagemCarregadaRef.current.src = editedSrc;
     }
   };
 
-  const blurOrSharpenImage = (amount: number) => {
-    if (uploadedImageRef.current) {
+  const borrarOuDesborrarImagem = (quantidade: number) => {
+    if (imagemCarregadaRef.current) {
       const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d')!!;
-      canvas.width = uploadedImageRef.current.width;
-      canvas.height = uploadedImageRef.current.height;
-      ctx.filter = `blur(${amount}px)`;
-      ctx.drawImage(uploadedImageRef.current, 0, 0);
+      const ctx = canvas.getContext('2d')!;
+      const img = imagemCarregadaRef.current;
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      ctx.drawImage(img, 0, 0);
+
+      ctx.filter = `blur(${quantidade}px)`;
+      ctx.drawImage(canvas, 0, 0);
+
       const editedSrc = canvas.toDataURL();
-      setPrevBlurSteps(prevSteps => [...prevSteps, editedSrc]);
-      setEditedImage(editedSrc);
-      uploadedImageRef.current.src = editedSrc;
+      setImagemEditada(editedSrc);
+      imagemCarregadaRef.current.src = editedSrc;
     }
   };
 
-  const handleBlurImage = () => {
-    if (uploadedImageRef.current) {
-      blurOrSharpenImage(3);
-      setBlurStep(prevStep => prevStep + 1);
+  const handleBorrarImagem = () => {
+    setPassosBorradosPrevios(prev => [...prev, imagemEditada!]);
+    setPassoBorrado(passoBorrado + 1);
+    borrarOuDesborrarImagem(passoBorrado + 1);
+  };
+
+  const handleDesborrarImagem = () => {
+    if (passosBorradosPrevios.length > 0) {
+      const ultimoPasso = passosBorradosPrevios.pop()!;
+      setImagemEditada(ultimoPasso);
+      imagemCarregadaRef.current!.src = ultimoPasso;
+      setPassoBorrado(passoBorrado - 1);
     }
   };
 
-  const handleUnblurImage = () => {
-    if (blurStep > 0) {
-      setBlurStep(prevStep => prevStep - 1);
-      const prevImage = prevBlurSteps.pop();
-      if (prevImage) {
-        setEditedImage(prevImage);
-        uploadedImageRef.current!.src = prevImage;
-      }
-    } else {
-      setEditedImage(originalImage);
-      if (originalImage) {
-        uploadedImageRef.current!.src = originalImage;
-      }
+  const baixarImagem = () => {
+    if (imagemEditada) {
+      const link = document.createElement('a');
+      link.href = imagemEditada;
+      link.download = 'imagem-editada.png';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   };
 
-  const handleDownloadImage = () => {
-    if (editedImage) {
-      const downloadLink = document.createElement('a');
-      downloadLink.href = editedImage;
-      downloadLink.download = 'edited_image.png';
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      document.body.removeChild(downloadLink);
-    }
-  };
-
-  const handleDownloadAllImages = () => {
-    images.forEach((img, index) => {
-      const downloadLink = document.createElement('a');
-      downloadLink.href = img.editedSrc || img.src;
-      downloadLink.download = `image_${index}.png`;
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      document.body.removeChild(downloadLink);
+  const baixarTodasImagens = () => {
+    imagens.forEach((imagem, index) => {
+      const link = document.createElement('a');
+      link.href = imagem.editedSrc || imagem.src;
+      link.download = `imagem-${index + 1}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     });
   };
 
-  const restoreToOriginal = () => {
-    if (originalImage) {
-      setEditedImage(originalImage);
-      if (uploadedImageRef.current) {
-        uploadedImageRef.current.src = originalImage;
-      }
+  const restaurarParaOriginal = () => {
+    setImagem(imagemOriginal);
+    setImagemEditada(imagemOriginal);
+    if (imagemCarregadaRef.current) {
+      imagemCarregadaRef.current.src = imagemOriginal!;
     }
+    setResolucaoImagemCarregada({ largura: tamanhoImagem!.largura, altura: tamanhoImagem!.altura });
+    setImagemComprimida(null);
+    setImagemBitmapPrevia(null);
+    setIsPretoBranco(false);
   };
 
-  const handleCustomResolutionChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleResolucaoPersonalizadaChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setCustomResolution(prevResolution => ({
-      ...prevResolution,
-      [name]: parseInt(value, 10)
+    setResolucaoPersonalizada(prevState => ({
+      ...prevState,
+      [name]: Number(value)
     }));
   };
 
-  const applyCustomResolution = () => {
-    if (uploadedImageRef.current) {
+  const aplicarResolucaoPersonalizada = () => {
+    if (imagemCarregadaRef.current) {
       const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d')!!;
-      canvas.width = customResolution.width;
-      canvas.height = customResolution.height;
-      ctx.drawImage(uploadedImageRef.current, 0, 0, customResolution.width, customResolution.height);
+      const ctx = canvas.getContext('2d')!;
+      const img = imagemCarregadaRef.current;
+      canvas.width = resolucaoPersonalizada.largura;
+      canvas.height = resolucaoPersonalizada.altura;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       const editedSrc = canvas.toDataURL();
-      setEditedImage(editedSrc);
-      uploadedImageRef.current.src = editedSrc;
+      setImagemEditada(editedSrc);
+      imagemCarregadaRef.current.src = editedSrc;
+      setResolucaoImagemCarregada({
+        largura: canvas.width,
+        altura: canvas.height
+      });
     }
   };
-
-  const imageList = useMemo(
-    () => images.map((img, index) => (
-      <img
-        key={index}
-        src={img.editedSrc || img.src}
-        alt={`Uploaded Image ${index}`}
-        style={{ width: '100px', height: 'auto', margin: '5px', cursor: 'pointer' }}
-        onClick={() => {
-          setImage(img.src);
-          setEditedImage(img.editedSrc || null);
-        }}
-      />
-    )),
-    [images]
-  );
 
   return (
     <div style={{
@@ -305,23 +308,25 @@ function App() {
         borderRadius: '10px',
         boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
         textAlign: 'center',
-        width: '80%'
+        width: '80%',
+        position: 'relative',
+        border: '2px solid #00ced1' // Borda verde água
       }}>
-        {!image && (
+        {!imagem && (
           <div style={{ fontSize: '24px', color: '#333', marginBottom: '20px' }}>
             <label htmlFor="imageInput" style={{ cursor: 'pointer', color: '#4e54c8' }}>
               Clique aqui para adicionar uma imagem
             </label>
           </div>
         )}
-        <input type="file" id="imageInput" accept="image/*" onChange={handleImageChange} style={{ display: 'none' }} />
+        <input type="file" id="imageInput" accept="image/*" onChange={handleImagemChange} style={{ display: 'none' }} />
         <div style={{ marginBottom: '20px', position: 'relative' }} className="image-container">
-          {image && (
+          {imagem && (
             <>
               <img
-                ref={uploadedImageRef}
-                src={editedImage || image}
-                alt="Uploaded Image"
+                ref={imagemCarregadaRef}
+                src={imagemEditada || imagem}
+                alt="Uploaded"
                 id="uploadedImage"
                 style={{
                   maxWidth: '100%',
@@ -330,7 +335,7 @@ function App() {
                   transition: 'all 0.3s ease'
                 }}
               />
-              {uploadedImageResolution && (
+              {resolucaoImagemCarregada && (
                 <div style={{
                   position: 'absolute',
                   top: '10px',
@@ -341,48 +346,53 @@ function App() {
                   borderRadius: '5px',
                   fontSize: '14px'
                 }}>
-                  {uploadedImageResolution.width} x {uploadedImageResolution.height}
+                  {resolucaoImagemCarregada.largura} x {resolucaoImagemCarregada.altura}
                 </div>
               )}
             </>
           )}
         </div>
-        {image && (
+        {imagem && (
           <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '20px', padding: '0 20px' }} className="controls">
-            <button className="button" onClick={convertToBlackAndWhite}>Preto e Branco</button>
-            <button className="button" onClick={rotateImage}>Girar</button>
-            <button className="button" onClick={compressImage}>Comprimir</button>
-            <button className="button" onClick={decompressImage}>Descomprimir</button>
-            <button className="button" onClick={convertToBitmap}>Bitmap</button>
-            <button className="button" onClick={handleStoreImage}>Adicionar nova imagem</button>
-            <button className="button" onClick={mirrorImage}>Espelhar</button>
-            <button className="button" onClick={handleBlurImage}>Borrar</button>
-            <button className="button" onClick={handleUnblurImage}>Desborrar</button>
-            <button className="button" onClick={handleDownloadImage}>Download</button>
-            <button className="button" onClick={handleDownloadAllImages}>Baixar todas as imagens</button>
-            <button className="button" onClick={restoreToOriginal}>Restaurar para configuração original</button>
-            <div>
+            <button className="button" onClick={converterParaPretoBranco}>Preto e Branco</button>
+            <button className="button" onClick={girarImagem}>Girar</button>
+            <button className="button" onClick={comprimirImagem}>Comprimir</button>
+            <button className="button" onClick={descomprimirImagem}>Descomprimir</button>
+            <button className="button" onClick={converterParaBitmap}>Bitmap</button>
+            <button className="button" onClick={handleArmazenarImagem}>Adicionar nova imagem</button>
+            <button className="button" onClick={espelharImagem}>Espelhar</button>
+            <button className="button" onClick={handleBorrarImagem}>Borrar</button>
+            <button className="button" onClick={handleDesborrarImagem}>Desborrar</button>
+            <button className="button" onClick={baixarImagem}>Download</button>
+            <button className="button" onClick={baixarTodasImagens}>Baixar todas as imagens</button>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <label htmlFor="largura" style={{ marginRight: '10px' }}>Largura:</label>
               <input
                 type="number"
-                placeholder="Largura"
-                name="width"
-                value={customResolution.width}
-                onChange={handleCustomResolutionChange}
+                id="largura"
+                name="largura"
+                value={resolucaoPersonalizada.largura}
+                onChange={handleResolucaoPersonalizadaChange}
+                style={{ width: '60px', marginRight: '10px' }}
               />
-              <span style={{ marginLeft: '10px', marginRight: '10px' }}>x</span>
+              <label htmlFor="altura" style={{ marginRight: '10px' }}>Altura:</label>
               <input
                 type="number"
-                placeholder="Altura"
-                name="height"
-                value={customResolution.height}
-                onChange={handleCustomResolutionChange}
+                id="altura"
+                name="altura"
+                value={resolucaoPersonalizada.altura}
+                onChange={handleResolucaoPersonalizadaChange}
+                style={{ width: '60px', marginRight: '10px' }}
               />
-              <button className="button" onClick={applyCustomResolution}>Aplicar Resolução Personalizada</button>
+              <button className="button" onClick={aplicarResolucaoPersonalizada}>Aplicar Resolução Personalizada</button>
             </div>
+            <button className="button" onClick={restaurarParaOriginal}>Restaurar para configuração original</button>
           </div>
         )}
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '5px' }}>
-          {imageList}
+          {imagens.map((img, index) => (
+            <img key={index} src={img.editedSrc || img.src} alt={`Imagem ${index + 1}`} style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '5px' }} />
+          ))}
         </div>
       </div>
     </div>
