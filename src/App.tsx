@@ -50,6 +50,7 @@ function App() {
       if (typeof reader.result === 'string') {
         setImagem(reader.result);
         setImagemOriginal(reader.result);
+        setImagemEditada(reader.result);
       }
     };
 
@@ -175,9 +176,10 @@ function App() {
 
   const handleArmazenarImagem = () => {
     if (imagemCarregadaRef.current && imagem) {
-      setImagens(prevImagens => [...prevImagens, { src: imagem, editedSrc: imagemEditada }]);
+      setImagens(prevImagens => [...prevImagens, { src: imagemOriginal!, editedSrc: imagemEditada }]);
       setImagem(null);
       setImagemEditada(null);
+      setImagemOriginal(null);
     }
   };
 
@@ -290,6 +292,13 @@ function App() {
     }
   };
 
+  const selecionarImagem = (index: number) => {
+    const imagemSelecionada = imagens[index];
+    setImagem(imagemSelecionada.src);
+    setImagemOriginal(imagemSelecionada.src);
+    setImagemEditada(imagemSelecionada.editedSrc || imagemSelecionada.src);
+  };
+
   return (
     <div style={{
       fontFamily: 'Arial, sans-serif',
@@ -298,23 +307,23 @@ function App() {
       justifyContent: 'center',
       alignItems: 'center',
       minHeight: '100vh',
-      background: 'linear-gradient(to right, #4e54c8, #8f94fb)',
+      background: 'linear-gradient(to right, #4E54C8, #F7EED4)',
       width: '100vw',
       overflow: 'hidden'
     }}>
       <div style={{
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        backgroundColor: 'rgba(229 222 255 , 0.29)',
         padding: '20px',
         borderRadius: '10px',
         boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
         textAlign: 'center',
         width: '80%',
         position: 'relative',
-        border: '2px solid #00ced1' // Borda verde água
+        border: '5px solid #B4BCFF'
       }}>
         {!imagem && (
-          <div style={{ fontSize: '24px', color: '#333', marginBottom: '20px' }}>
-            <label htmlFor="imageInput" style={{ cursor: 'pointer', color: '#4e54c8' }}>
+          <div style={{ fontSize: '36px', color: '#333', marginBottom: '20px' }}>
+            <label htmlFor="imageInput" style={{ cursor: 'pointer', color: '#3E3EFF' }}>
               Clique aqui para adicionar uma imagem
             </label>
           </div>
@@ -359,11 +368,10 @@ function App() {
             <button className="button" onClick={comprimirImagem}>Comprimir</button>
             <button className="button" onClick={descomprimirImagem}>Descomprimir</button>
             <button className="button" onClick={converterParaBitmap}>Bitmap</button>
-            <button className="button" onClick={handleArmazenarImagem}>Adicionar nova imagem</button>
             <button className="button" onClick={espelharImagem}>Espelhar</button>
             <button className="button" onClick={handleBorrarImagem}>Borrar</button>
             <button className="button" onClick={handleDesborrarImagem}>Desborrar</button>
-            <button className="button" onClick={baixarImagem}>Download</button>
+            <button className="button" onClick={baixarImagem}>Baixar imagem atual</button>
             <button className="button" onClick={baixarTodasImagens}>Baixar todas as imagens</button>
             <div style={{ display: 'flex', alignItems: 'center' }}>
               <label htmlFor="largura" style={{ marginRight: '10px' }}>Largura:</label>
@@ -373,7 +381,9 @@ function App() {
                 name="largura"
                 value={resolucaoPersonalizada.largura}
                 onChange={handleResolucaoPersonalizadaChange}
-                style={{ width: '60px', marginRight: '10px' }}
+                style={{ width: '60px', marginRight: '10px', border: '2px solid #00CED1', 
+                borderRadius: '5px', 
+                padding: '2px'}}
               />
               <label htmlFor="altura" style={{ marginRight: '10px' }}>Altura:</label>
               <input
@@ -382,16 +392,23 @@ function App() {
                 name="altura"
                 value={resolucaoPersonalizada.altura}
                 onChange={handleResolucaoPersonalizadaChange}
-                style={{ width: '60px', marginRight: '10px' }}
+                style={{ width: '60px', marginRight: '10px', border: '2px solid #00CED1', borderRadius: '5px', padding:'2px' }}
               />
               <button className="button" onClick={aplicarResolucaoPersonalizada}>Aplicar Resolução Personalizada</button>
+              <button className="button" onClick={handleArmazenarImagem}>Adicionar nova imagem</button>
             </div>
             <button className="button" onClick={restaurarParaOriginal}>Restaurar para configuração original</button>
           </div>
         )}
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '5px' }}>
           {imagens.map((img, index) => (
-            <img key={index} src={img.editedSrc || img.src} alt={`Imagem ${index + 1}`} style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '5px' }} />
+            <img
+              key={index}
+              src={img.editedSrc || img.src}
+              alt={`Imagem ${index + 1}`}
+              style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '5px', cursor: 'pointer' }}
+              onClick={() => selecionarImagem(index)}
+            />
           ))}
         </div>
       </div>
