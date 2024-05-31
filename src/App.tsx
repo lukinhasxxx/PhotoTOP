@@ -206,29 +206,58 @@ function App() {
       const img = imagemCarregadaRef.current;
       canvas.width = img.naturalWidth;
       canvas.height = img.naturalHeight;
-      ctx.drawImage(img, 0, 0);
+      ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight);
 
-      ctx.filter = `blur(${quantidade}px)`;
-      ctx.drawImage(canvas, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      const blurRadius = Math.abs(quantidade);
+      const passes = blurRadius;
 
+      for (let pass = 0; pass < passes; pass++) {
+        for (let i = 0; i < data.length; i += 4) {
+          const sum = [0, 0, 0];
+          let count = 0;
+
+          for (let y = -blurRadius; y <= blurRadius; y++) {
+            for (let x = -blurRadius; x <= blurRadius; x++) {
+              const j = i + (y * canvas.width + x) * 4;
+              if (j >= 0 && j < data.length) {
+                sum[0] += data[j];
+                sum[1] += data[j + 1];
+                sum[2] += data[j + 2];
+                count++;
+              }
+            }
+          }
+
+          data[i] = sum[0] / count;
+          data[i + 1] = sum[1] / count;
+          data[i + 2] = sum[2] / count;
+        }
+      }
+
+      ctx.putImageData(imageData, 0, 0);
       const editedSrc = canvas.toDataURL();
       setImagemEditada(editedSrc);
       imagemCarregadaRef.current.src = editedSrc;
+
+      if (quantidade > 0) {
+        setPassosBorradosPrevios([...passosBorradosPrevios, editedSrc]);
+      } else if (quantidade < 0) {
+        setPassosBorradosPrevios(passosBorradosPrevios.slice(0, -1));
+      }
+
+      setPassoBorrado(quantidade);
     }
   };
 
   const handleBorrarImagem = () => {
-    setPassosBorradosPrevios(prev => [...prev, imagemEditada!]);
-    setPassoBorrado(passoBorrado + 1);
     borrarOuDesborrarImagem(passoBorrado + 1);
   };
 
   const handleDesborrarImagem = () => {
-    if (passosBorradosPrevios.length > 0) {
-      const ultimoPasso = passosBorradosPrevios.pop()!;
-      setImagemEditada(ultimoPasso);
-      imagemCarregadaRef.current!.src = ultimoPasso;
-      setPassoBorrado(passoBorrado - 1);
+    if (passoBorrado > 0) {
+      borrarOuDesborrarImagem(passoBorrado - 1);
     }
   };
 
@@ -236,34 +265,40 @@ function App() {
     if (imagemEditada) {
       const link = document.createElement('a');
       link.href = imagemEditada;
-      link.download = 'imagem-editada.png';
-      document.body.appendChild(link);
+      link.download = 'imagem_editada.png';
       link.click();
-      document.body.removeChild(link);
     }
   };
 
   const baixarTodasImagens = () => {
-    imagens.forEach((imagem, index) => {
+    imagens.forEach((img, index) => {
       const link = document.createElement('a');
-      link.href = imagem.editedSrc || imagem.src;
-      link.download = `imagem-${index + 1}.png`;
-      document.body.appendChild(link);
+      link.href = img.editedSrc || img.src;
+      link.download = `imagem_${index + 1}.png`;
       link.click();
-      document.body.removeChild(link);
     });
   };
 
-  const restaurarParaOriginal = () => {
-    setImagem(imagemOriginal);
-    setImagemEditada(imagemOriginal);
-    if (imagemCarregadaRef.current) {
-      imagemCarregadaRef.current.src = imagemOriginal!;
+  const selecionarImagem = (index: number) => {
+    const img = imagens[index];
+    setImagem(img.src);
+    setImagemOriginal(img.src);
+    setImagemEditada(img.editedSrc || img.src);
+  };
+
+  const aplicarResolucaoPersonalizada = () => {
+    if (imagemCarregadaRef.current && resolucaoPersonalizada.largura > 0 && resolucaoPersonalizada.altura > 0) {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
+      const img = imagemCarregadaRef.current;
+      canvas.width = resolucaoPersonalizada.largura;
+      canvas.height = resolucaoPersonalizada.altura;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const editedSrc = canvas.toDataURL();
+      setImagemEditada(editedSrc);
+      imagemCarregadaRef.current.src = editedSrc;
+      setResolucaoImagemCarregada(resolucaoPersonalizada);
     }
-    setResolucaoImagemCarregada({ largura: tamanhoImagem!.largura, altura: tamanhoImagem!.altura });
-    setImagemComprimida(null);
-    setImagemBitmapPrevia(null);
-    setIsPretoBranco(false);
   };
 
   const handleResolucaoPersonalizadaChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -274,29 +309,17 @@ function App() {
     }));
   };
 
-  const aplicarResolucaoPersonalizada = () => {
-    if (imagemCarregadaRef.current) {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d')!;
-      const img = imagemCarregadaRef.current;
-      canvas.width = resolucaoPersonalizada.largura;
-      canvas.height = resolucaoPersonalizada.altura;
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const editedSrc = canvas.toDataURL();
-      setImagemEditada(editedSrc);
-      imagemCarregadaRef.current.src = editedSrc;
+  const restaurarParaOriginal = () => {
+    if (imagemCarregadaRef.current && imagemOriginal) {
+      setImagemEditada(imagemOriginal);
+      imagemCarregadaRef.current.src = imagemOriginal;
       setResolucaoImagemCarregada({
-        largura: canvas.width,
-        altura: canvas.height
+        largura: imagemCarregadaRef.current.naturalWidth,
+        altura: imagemCarregadaRef.current.naturalHeight
       });
+      setImagemComprimida(null);
+      setImagemBitmapPrevia(null);
     }
-  };
-
-  const selecionarImagem = (index: number) => {
-    const imagemSelecionada = imagens[index];
-    setImagem(imagemSelecionada.src);
-    setImagemOriginal(imagemSelecionada.src);
-    setImagemEditada(imagemSelecionada.editedSrc || imagemSelecionada.src);
   };
 
   return (
@@ -339,6 +362,7 @@ function App() {
                 id="uploadedImage"
                 style={{
                   maxWidth: '100%',
+                  maxHeight: '80vh', // Limita a altura da imagem
                   borderRadius: '10px',
                   boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
                   transition: 'all 0.3s ease'
