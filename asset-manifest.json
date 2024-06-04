@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/lukinhasxxx/photoTOP/static/css/main.6796b8d4.css",
-    "main.js": "/lukinhasxxx/photoTOP/static/js/main.d0e9a10c.js",
-    "static/js/453.520e1735.chunk.js": "/lukinhasxxx/photoTOP/static/js/453.520e1735.chunk.js",
-    "index.html": "/lukinhasxxx/photoTOP/index.html",
-    "main.6796b8d4.css.map": "/lukinhasxxx/photoTOP/static/css/main.6796b8d4.css.map",
-    "main.d0e9a10c.js.map": "/lukinhasxxx/photoTOP/static/js/main.d0e9a10c.js.map",
-    "453.520e1735.chunk.js.map": "/lukinhasxxx/photoTOP/static/js/453.520e1735.chunk.js.map"
+    "main.css": "/PhotoTOP/static/css/main.6796b8d4.css",
+    "main.js": "/PhotoTOP/static/js/main.90f50fa4.js",
+    "static/js/453.520e1735.chunk.js": "/PhotoTOP/static/js/453.520e1735.chunk.js",
+    "index.html": "/PhotoTOP/index.html",
+    "main.6796b8d4.css.map": "/PhotoTOP/static/css/main.6796b8d4.css.map",
+    "main.90f50fa4.js.map": "/PhotoTOP/static/js/main.90f50fa4.js.map",
+    "453.520e1735.chunk.js.map": "/PhotoTOP/static/js/453.520e1735.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.6796b8d4.css",
-    "static/js/main.d0e9a10c.js"
+    "static/js/main.90f50fa4.js"
   ]
 }
